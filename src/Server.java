@@ -4,7 +4,7 @@ public class Server implements Runnable{
 
     public Server() {
         try {
-            server = new DatagramSocket();
+            server = new DatagramSocket(25565);
         } catch (SocketException e) {
             e.printStackTrace();
         }
