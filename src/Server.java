@@ -1,6 +1,10 @@
 import java.net.*;
+import java.util.HashMap;
+
 public class Server implements Runnable{
     DatagramSocket server;
+    HashMap<String, InetAddress> clientsAdress = new HashMap<>();
+    HashMap<String, Integer> clientsPort = new HashMap<>();
 
     public Server() {
         try {
