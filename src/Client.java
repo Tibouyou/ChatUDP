@@ -28,12 +28,10 @@ public class Client implements Runnable{
     public void sendPacket() {
         try {
             Scanner myObj = new Scanner(System.in);
-            System.out.println("Enter a message : ");
             byte[] buffer = myObj.nextLine().getBytes();
             InetAddress address = InetAddress.getByName("localhost");
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
             client.send(packet);
-            System.out.println("Packet sent to " + packet.getAddress() + ":" + packet.getPort());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -44,9 +42,8 @@ public class Client implements Runnable{
             byte[] buffer = new byte[1024];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             client.receive(packet);
-            System.out.println("Received packet from " + packet.getAddress() + ":" + packet.getPort());
             String message = new String(packet.getData(), 0, packet.getLength());
-            System.out.println("Message : " + message);
+            System.out.println(message);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -58,9 +55,23 @@ public class Client implements Runnable{
 
     @Override
     public void run() {
-        while (true) {
-            sendPacket();
-            listen();
-        }
+        Thread sendPacket = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    sendPacket();
+                }
+            }
+        });
+
+        Thread listen = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    listen();
+                }
+            }
+        });
+
+        sendPacket.start();
+        listen.start();
     }
 }
