@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -10,6 +11,9 @@ public class Server implements Runnable{
     DatagramSocket server;
     HashMap<String, InetAddress> clientsAdress = new HashMap<>();
     HashMap<String, Integer> clientsPort = new HashMap<>();
+
+    HashMap<String, ArrayList<String>> rooms = new HashMap<>();
+    HashMap<String, String> clientsRoom = new HashMap<>();
 
     String logFile;
 
@@ -45,7 +49,32 @@ public class Server implements Runnable{
                     case "/msg" -> {
                         String pseudo = args[0];
                         String messageToSend = message.substring(command.length() + pseudo.length() + 2);
-                        sendMessageToUser(pseudo, packet, messageToSend);
+                        sendPrivateMessage(pseudo, packet, messageToSend);
+                    }
+                    case "/room" -> {
+                        String argument = args[0];
+                        switch (argument) {
+                            case "create" -> {
+                                String roomName = args[1];
+                                rooms.put(roomName, new ArrayList<>());
+                                rooms.get(roomName).add(getPseudo(packet.getAddress(), packet.getPort()));
+                                sendMessageToUser(packet, "Room created");
+                            }
+                            case "join" -> {
+                                String roomName = args[1];
+                                if (!rooms.containsKey(roomName)) {
+                                    sendMessageToUser(packet, "Room doesn't exist");
+                                    return;
+                                }
+                                rooms.get(roomName).add(getPseudo(packet.getAddress(), packet.getPort()));
+                                sendMessageToUser(packet, "Room joined");
+                            }
+                            case "leave" -> {
+                                String roomName = args[1];
+                                rooms.get(roomName).remove(getPseudo(packet.getAddress(), packet.getPort()));
+                                sendMessageToUser(packet, "Room left");
+                            }
+                        }
                     }
                 }
             }else {
@@ -54,6 +83,11 @@ public class Server implements Runnable{
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendMessageToUser(DatagramPacket packet, String message) throws IOException {
+        DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
+        server.send(response);
     }
 
     public String getPseudo(InetAddress address, int port) {
@@ -70,7 +104,7 @@ public class Server implements Runnable{
         return pseudoSender;
     }
 
-    public void sendMessageToUser(String pseudo, DatagramPacket packet, String message) throws IOException {
+    public void sendPrivateMessage(String pseudo, DatagramPacket packet, String message) throws IOException {
         String pseudoSender = getPseudo(packet.getAddress(), packet.getPort());
         message = "(private)" + pseudoSender + " : " + message;
         System.out.println(message);
