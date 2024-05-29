@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class Server implements Runnable{
@@ -35,16 +36,51 @@ public class Server implements Runnable{
                 return;
             }
             if (message.startsWith("/")) {
-                switch (message) {
+                String command = message.split(" ")[0];
+                String[] args = message.substring(command.length()+1).split(" ");
+                switch (command) {
                     case "/quit" -> {
                         disconnect(packet.getAddress());
                     }
+                    case "/msg" -> {
+                        String pseudo = args[0];
+                        String messageToSend = message.substring(command.length() + pseudo.length() + 2);
+                        sendMessageToUser(pseudo, packet, messageToSend);
+                    }
                 }
+            }else {
+                sendMessage(packet, message);
             }
-            sendMessage(packet,message);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public String getPseudo(InetAddress address, int port) {
+        String[] pseudoWithAdress = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(adress)).map(entry -> entry.getKey()).toArray(String[]::new);
+        String[] pseudoWithPort = clientsPort.entrySet().stream().filter(entry -> entry.getValue().equals(port)).map(entry -> entry.getKey()).toArray(String[]::new);
+        String pseudoSender = "";
+        for (String pseudoAdress : pseudoWithAdress) {
+            for (String pseudoPort : pseudoWithPort) {
+                if (pseudoAdress.equals(pseudoPort)) {
+                    pseudoSender = pseudoAdress;
+                }
+            }
+        }
+        return pseudoSender;
+    }
+
+    public void sendMessageToUser(String pseudo, DatagramPacket packet, String message) throws IOException {
+        String pseudoSender = getPseudo(packet.getAddress(), packet.getPort());
+        message = "(private)" + pseudoSender + " : " + message;
+        System.out.println(message);
+        FileOutputStream fos = new FileOutputStream(logFile, true);
+        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
+        fos.close();
+        DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
+        DatagramPacket response2 = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
+        server.send(response1);
+        server.send(response2);
     }
 
     public void disconnect(InetAddress address) {
