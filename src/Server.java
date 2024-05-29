@@ -57,7 +57,7 @@ public class Server implements Runnable{
     }
 
     public String getPseudo(InetAddress address, int port) {
-        String[] pseudoWithAdress = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(adress)).map(entry -> entry.getKey()).toArray(String[]::new);
+        String[] pseudoWithAdress = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(address)).map(entry -> entry.getKey()).toArray(String[]::new);
         String[] pseudoWithPort = clientsPort.entrySet().stream().filter(entry -> entry.getValue().equals(port)).map(entry -> entry.getKey()).toArray(String[]::new);
         String pseudoSender = "";
         for (String pseudoAdress : pseudoWithAdress) {
@@ -84,17 +84,6 @@ public class Server implements Runnable{
     }
 
     public void disconnect(InetAddress address) {
-        String pseudo = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(address)).findFirst().get().getKey();
-        clientsAdress.remove(pseudo);
-        clientsPort.remove(pseudo);
-        System.out.println("Client " + pseudo + " disconnected\n");
-        try {
-            FileOutputStream fos = new FileOutputStream(logFile, true);
-            fos.write(("Client " + pseudo + " disconnected\n").getBytes());
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
     }
 
