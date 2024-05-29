@@ -3,9 +3,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.sql.Time;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class Server implements Runnable{
     DatagramSocket server;
@@ -21,9 +21,7 @@ public class Server implements Runnable{
         try {
             server = new DatagramSocket(25565);
             logFile = "logs/log.txt";
-            FileOutputStream fos = new FileOutputStream(logFile, true);
-            fos.write(("Server started\n").getBytes());
-            fos.close();
+            log("Server started\n","");
             rooms.put("general", new ArrayList<>());
         } catch (Exception e) {
             e.printStackTrace();
@@ -37,18 +35,13 @@ public class Server implements Runnable{
             server.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
             if (message.startsWith("pseudo:")) {
-                if (clientsAdress.containsValue(packet.getAddress())) {
-                    String messageToSend = "Pseudo already taken";
-                    sendMessageToUser(packet, messageToSend);
-                    return;
-                } else {
-                    newUser(packet);
-                }
+                newUser(packet);
                 return;
             }
             if (message.startsWith("/")) {
                 String command = message.split(" ")[0];
                 String[] args = message.substring(command.length()).split(" ");
+                args = Arrays.copyOfRange(args, 1, args.length);
                 switch (command) {
                     case "/quit" -> {
                         disconnect(packet.getAddress(), packet.getPort());
@@ -60,6 +53,7 @@ public class Server implements Runnable{
                     }
                     case "/room" -> {
                         String argument = args[0];
+                        System.out.println(argument);
                         switch (argument) {
                             case "create" -> {
                                 String roomName = args[1];
@@ -108,9 +102,7 @@ public class Server implements Runnable{
         String room = clientsRoom.get(pseudoSender);
         message = pseudoSender + " : " + message;
         System.out.println(message);
-        FileOutputStream fos = new FileOutputStream(logFile, true);
-        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
-        fos.close();
+        log(clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n","["+room+"]");
         for (String pseudo : rooms.get(room)) {
             DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
             server.send(response);
@@ -138,11 +130,9 @@ public class Server implements Runnable{
 
     public void sendPrivateMessage(String pseudo, DatagramPacket packet, String message) throws IOException {
         String pseudoSender = getPseudo(packet.getAddress(), packet.getPort());
-        message = "(private)" + pseudoSender + " : " + message;
+        message = "(private) " + pseudoSender + " : " + message;
         System.out.println(message);
-        FileOutputStream fos = new FileOutputStream(logFile, true);
-        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
-        fos.close();
+        log(clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n","(private)");
         DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
         DatagramPacket response2 = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
         server.send(response1);
@@ -155,13 +145,7 @@ public class Server implements Runnable{
         clientsAdress.remove(pseudo);
         clientsPort.remove(pseudo);
         System.out.println("Client " + pseudo + " disconnected\n");
-        try {
-            FileOutputStream fos = new FileOutputStream(logFile, true);
-            fos.write(("Client " + pseudo + " disconnected\n").getBytes());
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        log("Client " + pseudo + " disconnected\n","");
     }
 
     public void newUser(DatagramPacket packet) throws IOException {
@@ -172,15 +156,9 @@ public class Server implements Runnable{
         clientsRoom.put(pseudo, "general");
         rooms.get("general").add(pseudo);
         System.out.println("Client " + pseudo + " connected\n");
-        try {
-            FileOutputStream fos = new FileOutputStream(logFile, true);
-            fos.write(("Client " + pseudo + " connected\n").getBytes());
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        log("Client " + pseudo + " connected\n","");
         String messageToSend = "Welcome on server Miguel (=^・ェ・^=) !";
-        DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length(), packet.getAddress(), packet.getPort());
+        DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length()+6, packet.getAddress(), packet.getPort());
         server.send(response);
     }
 
@@ -188,17 +166,22 @@ public class Server implements Runnable{
         return server.getLocalPort();
     }
 
+    private void log(String message,String room) {
+        try {
+            FileOutputStream fos = new FileOutputStream(logFile, true);
+            String date = new SimpleDateFormat("[dd/MM/yyyy HH:mm:ss] ").format(Calendar.getInstance().getTime());
+            fos.write((date + room + message).getBytes());
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void run() {
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
-                try {
-                    FileOutputStream fos = new FileOutputStream(logFile, true);
-                    fos.write(("Server stopped\n").getBytes());
-                    fos.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                log("Server stopped\n","");
             }
         }));
 

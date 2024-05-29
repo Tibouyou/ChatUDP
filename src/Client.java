@@ -1,6 +1,7 @@
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Scanner;
 public class Client implements Runnable{
     DatagramSocket client;
@@ -22,13 +23,17 @@ public class Client implements Runnable{
         }
     }
 
-    private void joinServer () throws IOException {
-        Scanner myObj = new Scanner(System.in);
-        System.out.println("Enter your pseudo : ");
-        pseudo = myObj.nextLine();
-        byte[] buffer = ("pseudo:"+pseudo).getBytes();
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-        client.send(packet);
+    private void joinServer () {
+        try {
+            Scanner myObj = new Scanner(System.in);
+            System.out.println("Enter your pseudo : ");
+            pseudo = myObj.nextLine();
+            byte[] buffer = ("pseudo:"+pseudo).getBytes();
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+            client.send(packet);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void sendPacket() {
@@ -38,10 +43,8 @@ public class Client implements Runnable{
             if (new String(buffer).equals("/quit")) {
                 System.exit(0);
             }
-            InetAddress address = InetAddress.getByName("localhost");
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
             client.send(packet);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -53,12 +56,7 @@ public class Client implements Runnable{
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             client.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
-            if (message.equals("Pseudo already taken")) {
-                System.out.println("Pseudo already taken, please choose another one");
-                joinServer();
-            } else {
-                System.out.println(message);
-            }
+            System.out.println(message);
         } catch (Exception e) {
             e.printStackTrace();
         }
