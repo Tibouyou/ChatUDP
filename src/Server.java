@@ -1,5 +1,7 @@
+import javax.xml.crypto.Data;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.*;
 import java.util.HashMap;
 
@@ -29,35 +31,55 @@ public class Server implements Runnable{
             server.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
             if (message.startsWith("pseudo:")) {
-                String pseudo = message.split(":")[1];
-                clientsAdress.put(pseudo, packet.getAddress());
-                clientsPort.put(pseudo, packet.getPort());
-                System.out.println("Client " + pseudo + " connected\n");
-                try {
-                    FileOutputStream fos = new FileOutputStream(logFile, true);
-                    fos.write(("Client " + pseudo + " connected\n").getBytes());
-                    fos.close();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                }
-                String messageToSend = "Welcome on server Miguel (=^・ェ・^=) " + pseudo + " !";
-                DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length(), packet.getAddress(), packet.getPort());
-                server.send(response);
+                newUser(packet);
                 return;
             }
-            String pseudoSender = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(packet.getAddress())).findFirst().get().getKey();
-            message = pseudoSender + " : " + message;
-            System.out.println(message);
-            FileOutputStream fos = new FileOutputStream(logFile, true);
-            fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
-            fos.close();
-            for (String pseudo : clientsAdress.keySet()) {
-                DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
-                server.send(response);
+            if (message.startsWith("/")) {
+                switch (message) {
+                    case "/quit" -> {
+                        disconnect(packet.getAddress());
+                    }
+                }
             }
+            sendMessage(packet,message);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void disconnect(InetAddress address) {
+
+    }
+
+    public void sendMessage(DatagramPacket packet, String message) throws IOException {
+        String pseudoSender = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(packet.getAddress())).findFirst().get().getKey();
+        message = pseudoSender + " : " + message;
+        System.out.println(message);
+        FileOutputStream fos = new FileOutputStream(logFile, true);
+        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
+        fos.close();
+        for (String pseudo : clientsAdress.keySet()) {
+            DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
+            server.send(response);
+        }
+    }
+
+    public void newUser(DatagramPacket packet) throws IOException {
+        String message = new String(packet.getData(), 0, packet.getLength());
+        String pseudo = message.split(":")[1];
+        clientsAdress.put(pseudo, packet.getAddress());
+        clientsPort.put(pseudo, packet.getPort());
+        System.out.println("Client " + pseudo + " connected\n");
+        try {
+            FileOutputStream fos = new FileOutputStream(logFile, true);
+            fos.write(("Client " + pseudo + " connected\n").getBytes());
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        String messageToSend = "Welcome on server Miguel (=^・ェ・^=) !";
+        DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length(), packet.getAddress(), packet.getPort());
+        server.send(response);
     }
 
     public int getPort() {
