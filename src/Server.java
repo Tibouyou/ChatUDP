@@ -51,6 +51,26 @@ public class Server implements Runnable{
                         String messageToSend = message.substring(command.length() + pseudo.length() + 2);
                         sendPrivateMessage(pseudo, packet, messageToSend);
                     }
+                    case "/list" -> {
+                        String messageToSend = "Connected people : " + clientsAdress.keySet() + "\n" +
+                                "Rooms : " + rooms.keySet();
+                        sendMessageToUser(packet, messageToSend);
+                    }
+                    case "/miguel" -> {
+                        String messageToSend = "Miguel is the best (=^・ェ・^=) !";
+                        sendMessageToUser(packet, messageToSend);
+                    }
+                    case "/help" -> {
+                        String messageToSend = "Commands available :\n" +
+                                "/quit : disconnect from the server\n" +
+                                "/list : list connected people and rooms\n" +
+                                "/msg [pseudo] [message] : send a private message to a user\n" +
+                                "/room create [roomName] : create a room\n" +
+                                "/room join [roomName] : join a room\n" +
+                                "/room leave [roomName] : leave a room\n" +
+                                "/miguel : summon Miguel\n";
+                        sendMessageToUser(packet, messageToSend);
+                    }
                     case "/room" -> {
                         String argument = args[0];
                         System.out.println(argument);
@@ -86,7 +106,13 @@ public class Server implements Runnable{
                                     rooms.remove(roomName);
                                 }
                             }
+                            default -> {
+                                sendMessageToUser(packet, "Unknown command");
+                            }
                         }
+                    }
+                    default -> {
+                        sendMessageToUser(packet, "Unknown command");
                     }
                 }
             } else {
