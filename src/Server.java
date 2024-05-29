@@ -37,7 +37,13 @@ public class Server implements Runnable{
             server.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
             if (message.startsWith("pseudo:")) {
-                newUser(packet);
+                if (clientsAdress.containsValue(packet.getAddress())) {
+                    String messageToSend = "Pseudo already taken";
+                    sendMessageToUser(packet, messageToSend);
+                    return;
+                } else {
+                    newUser(packet);
+                }
                 return;
             }
             if (message.startsWith("/")) {
@@ -89,7 +95,7 @@ public class Server implements Runnable{
                         }
                     }
                 }
-            }else {
+            } else {
                 sendMessage(packet, message);
             }
         } catch (Exception e) {

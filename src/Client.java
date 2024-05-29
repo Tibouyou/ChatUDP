@@ -7,23 +7,28 @@ public class Client implements Runnable{
     int port;
 
     String pseudo;
+    InetAddress address;
 
     public Client(int port) {
         try {
             client = new DatagramSocket();
             this.port = port;
-            Scanner myObj = new Scanner(System.in);
-            System.out.println("Enter your pseudo : ");
-            pseudo = myObj.nextLine();
-            byte[] buffer = ("pseudo:"+pseudo).getBytes();
-            InetAddress address = InetAddress.getByName("localhost");
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-            client.send(packet);
+            address = InetAddress.getByName("localhost");
+            joinServer();
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void joinServer () throws IOException {
+        Scanner myObj = new Scanner(System.in);
+        System.out.println("Enter your pseudo : ");
+        pseudo = myObj.nextLine();
+        byte[] buffer = ("pseudo:"+pseudo).getBytes();
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+        client.send(packet);
     }
 
     public void sendPacket() {
@@ -48,7 +53,12 @@ public class Client implements Runnable{
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             client.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
-            System.out.println(message);
+            if (message.equals("Pseudo already taken")) {
+                System.out.println("Pseudo already taken, please choose another one");
+                joinServer();
+            } else {
+                System.out.println(message);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
