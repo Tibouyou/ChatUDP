@@ -1,3 +1,4 @@
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
@@ -32,6 +33,9 @@ public class Client implements Runnable{
             InetAddress address = InetAddress.getByName("localhost");
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
             client.send(packet);
+            if (new String(buffer).equals("/quit")) {
+                System.exit(0);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -55,6 +59,19 @@ public class Client implements Runnable{
 
     @Override
     public void run() {
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                try {
+                    byte[] buffer = "/quit".getBytes();
+                    InetAddress address = InetAddress.getByName("localhost");
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+                    client.send(packet);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }));
+
         Thread sendPacket = new Thread(new Runnable() {
             public void run() {
                 while (true) {
