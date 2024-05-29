@@ -58,7 +58,8 @@ public class Server implements Runnable{
                     }
                     case "/miguel" -> {
                         String messageToSend = "Miguel is the best (=^・ェ・^=) !";
-                        sendMessageToUser(packet, messageToSend);
+                        DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length()+6, packet.getAddress(), packet.getPort());
+                        server.send(response);
                     }
                     case "/help" -> {
                         String messageToSend = "Commands available :\n" +
@@ -72,8 +73,11 @@ public class Server implements Runnable{
                         sendMessageToUser(packet, messageToSend);
                     }
                     case "/room" -> {
+                        if (args.length < 2) {
+                            sendMessageToUser(packet, "Not enough arguments");
+                            return;
+                        }
                         String argument = args[0];
-                        System.out.println(argument);
                         switch (argument) {
                             case "create" -> {
                                 String roomName = args[1];
@@ -170,6 +174,12 @@ public class Server implements Runnable{
         System.out.println(pseudo);
         clientsAdress.remove(pseudo);
         clientsPort.remove(pseudo);
+        String room = clientsRoom.get(pseudo);
+        clientsRoom.remove(pseudo);
+        rooms.get(room).remove(pseudo);
+        if (rooms.get(room).isEmpty() && !room.equals("general")) {
+            rooms.remove(room);
+        }
         System.out.println("Client " + pseudo + " disconnected\n");
         log("Client " + pseudo + " disconnected\n","");
     }
