@@ -24,6 +24,7 @@ public class Server implements Runnable{
             FileOutputStream fos = new FileOutputStream(logFile, true);
             fos.write(("Server started\n").getBytes());
             fos.close();
+            rooms.put("general", new ArrayList<>());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -41,10 +42,10 @@ public class Server implements Runnable{
             }
             if (message.startsWith("/")) {
                 String command = message.split(" ")[0];
-                String[] args = message.substring(command.length()+1).split(" ");
+                String[] args = message.substring(command.length()).split(" ");
                 switch (command) {
                     case "/quit" -> {
-                        disconnect(packet.getAddress());
+                        disconnect(packet.getAddress(), packet.getPort());
                     }
                     case "/msg" -> {
                         String pseudo = args[0];
@@ -56,8 +57,14 @@ public class Server implements Runnable{
                         switch (argument) {
                             case "create" -> {
                                 String roomName = args[1];
+                                if (rooms.containsKey(roomName)) {
+                                    sendMessageToUser(packet, "Room already exist");
+                                    return;
+                                }
                                 rooms.put(roomName, new ArrayList<>());
                                 rooms.get(roomName).add(getPseudo(packet.getAddress(), packet.getPort()));
+                                rooms.get("general").remove(getPseudo(packet.getAddress(), packet.getPort()));
+                                clientsRoom.put(getPseudo(packet.getAddress(), packet.getPort()), roomName);
                                 sendMessageToUser(packet, "Room created");
                             }
                             case "join" -> {
@@ -67,12 +74,17 @@ public class Server implements Runnable{
                                     return;
                                 }
                                 rooms.get(roomName).add(getPseudo(packet.getAddress(), packet.getPort()));
+                                rooms.get("general").remove(getPseudo(packet.getAddress(), packet.getPort()));
+                                clientsRoom.put(getPseudo(packet.getAddress(), packet.getPort()), roomName);
                                 sendMessageToUser(packet, "Room joined");
                             }
                             case "leave" -> {
                                 String roomName = args[1];
                                 rooms.get(roomName).remove(getPseudo(packet.getAddress(), packet.getPort()));
                                 sendMessageToUser(packet, "Room left");
+                                if (rooms.get(roomName).isEmpty()) {
+                                    rooms.remove(roomName);
+                                }
                             }
                         }
                     }
@@ -82,6 +94,20 @@ public class Server implements Runnable{
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void sendMessage(DatagramPacket packet, String message) throws IOException {
+        String pseudoSender = getPseudo(packet.getAddress(), packet.getPort());
+        String room = clientsRoom.get(pseudoSender);
+        message = pseudoSender + " : " + message;
+        System.out.println(message);
+        FileOutputStream fos = new FileOutputStream(logFile, true);
+        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
+        fos.close();
+        for (String pseudo : rooms.get(room)) {
+            DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
+            server.send(response);
         }
     }
 
@@ -117,20 +143,18 @@ public class Server implements Runnable{
         server.send(response2);
     }
 
-    public void disconnect(InetAddress address) {
-
-    }
-
-    public void sendMessage(DatagramPacket packet, String message) throws IOException {
-        String pseudoSender = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(packet.getAddress())).findFirst().get().getKey();
-        message = pseudoSender + " : " + message;
-        System.out.println(message);
-        FileOutputStream fos = new FileOutputStream(logFile, true);
-        fos.write((clientsAdress.get(pseudoSender)+":"+clientsPort.get(pseudoSender)+"/"+message+"\n").getBytes());
-        fos.close();
-        for (String pseudo : clientsAdress.keySet()) {
-            DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), clientsAdress.get(pseudo), clientsPort.get(pseudo));
-            server.send(response);
+    public void disconnect(InetAddress address, int port) {
+        String pseudo = getPseudo(address, port);
+        System.out.println(pseudo);
+        clientsAdress.remove(pseudo);
+        clientsPort.remove(pseudo);
+        System.out.println("Client " + pseudo + " disconnected\n");
+        try {
+            FileOutputStream fos = new FileOutputStream(logFile, true);
+            fos.write(("Client " + pseudo + " disconnected\n").getBytes());
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -139,6 +163,8 @@ public class Server implements Runnable{
         String pseudo = message.split(":")[1];
         clientsAdress.put(pseudo, packet.getAddress());
         clientsPort.put(pseudo, packet.getPort());
+        clientsRoom.put(pseudo, "general");
+        rooms.get("general").add(pseudo);
         System.out.println("Client " + pseudo + " connected\n");
         try {
             FileOutputStream fos = new FileOutputStream(logFile, true);

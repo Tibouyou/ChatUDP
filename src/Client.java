@@ -30,12 +30,13 @@ public class Client implements Runnable{
         try {
             Scanner myObj = new Scanner(System.in);
             byte[] buffer = myObj.nextLine().getBytes();
-            InetAddress address = InetAddress.getByName("localhost");
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-            client.send(packet);
             if (new String(buffer).equals("/quit")) {
                 System.exit(0);
             }
+            InetAddress address = InetAddress.getByName("localhost");
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+            client.send(packet);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
