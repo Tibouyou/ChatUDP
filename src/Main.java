@@ -12,9 +12,9 @@ public class Main {
     }
 
     public static void server() {
-        Server server = new Server();
-        System.out.println("Server started on port " + server.getPort());
-        Thread serverThread = new Thread(server);
+        MainServer mainServer = new MainServer();
+        System.out.println("Server started");
+        Thread serverThread = new Thread(mainServer);
         serverThread.start();
     }
 

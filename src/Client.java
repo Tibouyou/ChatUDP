@@ -4,6 +4,7 @@ import java.net.*;
 import java.util.Arrays;
 import java.util.Scanner;
 public class Client implements Runnable{
+    boolean connected = false;
     DatagramSocket client;
     int port;
 
@@ -25,12 +26,25 @@ public class Client implements Runnable{
 
     private void joinServer () {
         try {
-            Scanner myObj = new Scanner(System.in);
-            System.out.println("Enter your pseudo : ");
-            pseudo = myObj.nextLine();
-            byte[] buffer = ("pseudo:"+pseudo).getBytes();
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-            client.send(packet);
+            while (!connected) {
+                Scanner myObj = new Scanner(System.in);
+                System.out.println("Enter your pseudo : ");
+                pseudo = myObj.nextLine();
+                byte[] buffer = (pseudo).getBytes();
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+                client.send(packet);
+                byte[] buffer2 = new byte[1024];
+                DatagramPacket packet2 = new DatagramPacket(buffer2, buffer2.length);
+                client.receive(packet2);
+                String message = new String(packet2.getData(), 0, packet2.getLength());
+                if (message.startsWith("port:")) {
+                    connected = true;
+                    System.out.println("Connected to the server");
+                    this.port = Integer.parseInt(message.substring(5));
+                } else {
+                    System.out.println("Pseudo already taken");
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
