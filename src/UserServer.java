@@ -3,6 +3,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,8 +30,7 @@ public class UserServer implements Runnable{
             this.address = address;
             this.pseudo = pseudo;
             this.mainServer = mainServer;
-            log("Client "+pseudo+" is connected on port"+server.getLocalPort()+"\n","");
-            System.out.println("Client "+pseudo+" is connected on port"+server.getLocalPort());
+            log("Client "+pseudo+" is connected on port"+server.getLocalPort()+"\n");
             String message = "port:"+server.getLocalPort();
             sendMessageToUser(new DatagramPacket(message.getBytes(), message.length(), address, port),message);
             mainServer.addUserInRoom("general",pseudo);
@@ -50,6 +52,7 @@ public class UserServer implements Runnable{
                 switch (command) {
                     case "/quit" -> {
                         mainServer.disconnect(this.pseudo);
+                        server.close();
                     }
                     case "/msg" -> {
                         String pseudo = args[0];
@@ -62,9 +65,12 @@ public class UserServer implements Runnable{
                         sendMessageToUser(packet, messageToSend);
                     }
                     case "/miguel" -> {
-                        String messageToSend = "Miguel is the best (=^・ェ・^=) !";
-                        DatagramPacket response = new DatagramPacket(messageToSend.getBytes(), messageToSend.length()+6, packet.getAddress(), packet.getPort());
-                        server.send(response);
+                        String messageToSend = Files.readString(Path.of("data/miguel.txt"), StandardCharsets.UTF_8);
+                        for (int i = 0; i < messageToSend.length(); i += 1024) {
+                            String msg = messageToSend.substring(i, Math.min(messageToSend.length(), i + 1024));
+                            DatagramPacket response = new DatagramPacket(msg.getBytes(), msg.getBytes().length, packet.getAddress(), packet.getPort());
+                            server.send(response);
+                        }
                     }
                     case "/help" -> {
                         String messageToSend = "Commands available :\n" +
@@ -132,9 +138,9 @@ public class UserServer implements Runnable{
 
     public void sendMessage(DatagramPacket packet, String message) throws IOException {
         String room = mainServer.getRoom(pseudo);
-        message = this.pseudo + " : " + message;
-        System.out.println("["+mainServer.getRoom(this.pseudo)+"]"+message);
-        log(this.address+":"+this.port+"/"+message+"\n","["+room+"]");
+        message = "["+mainServer.getRoom(this.pseudo)+"]" + this.pseudo + " : " + message + "\n";
+        System.out.println(message);
+        log(this.address+":"+this.port+"/"+message+"\n");
         for (String pseudo : mainServer.getUserInRoom(room)) {
             DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAdress(pseudo), mainServer.getPort(pseudo));
             server.send(response);
@@ -142,6 +148,7 @@ public class UserServer implements Runnable{
     }
 
     private void sendMessageToUser(DatagramPacket packet, String message) throws IOException {
+        message += "\n";
         DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
         server.send(response);
     }
@@ -149,17 +156,17 @@ public class UserServer implements Runnable{
     public void sendPrivateMessage(String pseudo, DatagramPacket packet, String message) throws IOException {
         message = "(private) " + this.pseudo + " : " + message;
         System.out.println(message);
-        log(this.address+":"+this.port+"/"+message+"\n","(private)");
+        log(this.address+":"+this.port+"/"+message+"\n");
         DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAdress(pseudo), mainServer.getPort(pseudo));
         DatagramPacket response2 = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
         server.send(response1);
         server.send(response2);
     }
-    private void log(String message,String room) {
+    private void log(String message) {
         try {
             FileOutputStream fos = new FileOutputStream(logFile, true);
             String date = new SimpleDateFormat("[dd/MM/yyyy HH:mm:ss] ").format(Calendar.getInstance().getTime());
-            fos.write((date + room + message).getBytes());
+            fos.write((date + message.strip()+"\n").getBytes());
             fos.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -168,7 +175,7 @@ public class UserServer implements Runnable{
 
     @Override
     public void run() {
-        while (true) {
+        while (!server.isClosed()) {
             listen();
         }
     }

@@ -18,7 +18,7 @@ public class MainServer implements Runnable{
         try {
             server = new DatagramSocket(25565);
             logFile = "logs/log.txt";
-            log("Server started\n","");
+            log("Server started\n");
             rooms.put("general", new ArrayList<>());
         } catch (Exception e) {
             e.printStackTrace();
@@ -32,11 +32,19 @@ public class MainServer implements Runnable{
             server.receive(packet);
             int portSender = packet.getPort();
             InetAddress addressSender = packet.getAddress();
-            String pseudo = getPseudo(addressSender, portSender);
-            if (pseudo != "") {
+            String pseudo = new String(packet.getData(), 0, packet.getLength());
+            if (clientsAdress.containsKey(pseudo)) {
+                String message = "Pseudo already taken";
+                DatagramPacket packet2 = new DatagramPacket(message.getBytes(), message.length(), addressSender, portSender);
+                server.send(packet2);
                 return;
             }
-            newUser(packet);
+            clientsAdress.put(pseudo, packet.getAddress());
+            clientsPort.put(pseudo, packet.getPort());
+            clientsRoom.put(pseudo, "general");
+            UserServer userServer = new UserServer(portSender, addressSender, pseudo, this);
+            Thread userServerThread = new Thread(userServer);
+            userServerThread.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -77,7 +85,6 @@ public class MainServer implements Runnable{
     }
 
     public ArrayList<String> getUserInRoom(String room) {
-        System.out.println(rooms.get(room));
         return rooms.get(room);
     }
 
@@ -87,20 +94,6 @@ public class MainServer implements Runnable{
 
     public int getPort(String pseudo) {
         return clientsPort.get(pseudo);
-    }
-
-    public String getPseudo(InetAddress address, int port) {
-        String[] pseudoWithAdress = clientsAdress.entrySet().stream().filter(entry -> entry.getValue().equals(address)).map(Map.Entry::getKey).toArray(String[]::new);
-        String[] pseudoWithPort = clientsPort.entrySet().stream().filter(entry -> entry.getValue().equals(port)).map(Map.Entry::getKey).toArray(String[]::new);
-        String pseudoSender = "";
-        for (String pseudoAdress : pseudoWithAdress) {
-            for (String pseudoPort : pseudoWithPort) {
-                if (pseudoAdress.equals(pseudoPort)) {
-                    pseudoSender = pseudoAdress;
-                }
-            }
-        }
-        return pseudoSender;
     }
 
     public void disconnect(String pseudo) {
@@ -114,27 +107,14 @@ public class MainServer implements Runnable{
             rooms.remove(room);
         }
         System.out.println("Client " + pseudo + " disconnected\n");
-        log("Client " + pseudo + " disconnected\n","");
+        log("Client " + pseudo + " disconnected\n");
     }
 
-    public void newUser(DatagramPacket packet) throws IOException {
-        String pseudo = new String(packet.getData(), 0, packet.getLength());
-        System.out.println(pseudo);
-        clientsAdress.put(pseudo, packet.getAddress());
-        clientsPort.put(pseudo, packet.getPort());
-        clientsRoom.put(pseudo, "general");
-        int portSender = packet.getPort();
-        InetAddress addressSender = packet.getAddress();
-        UserServer userServer = new UserServer(portSender, addressSender, pseudo, this);
-        Thread userServerThread = new Thread(userServer);
-        userServerThread.start();
-    }
-
-    private void log(String message,String room) {
+    private void log(String message) {
         try {
             FileOutputStream fos = new FileOutputStream(logFile, true);
             String date = new SimpleDateFormat("[dd/MM/yyyy HH:mm:ss] ").format(Calendar.getInstance().getTime());
-            fos.write((date + room + message).getBytes());
+            fos.write((date + message.strip()+"\n").getBytes());
             fos.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -143,11 +123,7 @@ public class MainServer implements Runnable{
 
     @Override
     public void run() {
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            public void run() {
-                log("Server stopped\n","");
-            }
-        }));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> log("Server stopped\n")));
 
         while (true) {
             listenConnexion();

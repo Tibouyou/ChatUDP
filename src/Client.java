@@ -40,7 +40,7 @@ public class Client implements Runnable{
                 if (message.startsWith("port:")) {
                     connected = true;
                     System.out.println("Connected to the server");
-                    this.port = Integer.parseInt(message.substring(5));
+                    this.port = Integer.parseInt(message.substring(5).strip());
                 } else {
                     System.out.println("Pseudo already taken");
                 }
@@ -70,7 +70,7 @@ public class Client implements Runnable{
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             client.receive(packet);
             String message = new String(packet.getData(), 0, packet.getLength());
-            System.out.println(message);
+            System.out.print(message);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -82,32 +82,26 @@ public class Client implements Runnable{
 
     @Override
     public void run() {
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            public void run() {
-                try {
-                    byte[] buffer = "/quit".getBytes();
-                    InetAddress address = InetAddress.getByName("localhost");
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-                    client.send(packet);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                byte[] buffer = "/quit".getBytes();
+                InetAddress address = InetAddress.getByName("localhost");
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
+                client.send(packet);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }));
 
-        Thread sendPacket = new Thread(new Runnable() {
-            public void run() {
-                while (true) {
-                    sendPacket();
-                }
+        Thread sendPacket = new Thread(() -> {
+            while (true) {
+                sendPacket();
             }
         });
 
-        Thread listen = new Thread(new Runnable() {
-            public void run() {
-                while (true) {
-                    listen();
-                }
+        Thread listen = new Thread(() -> {
+            while (true) {
+                listen();
             }
         });
 
