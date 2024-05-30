@@ -157,6 +157,10 @@ public class UserServer implements Runnable{
         message = "(private) " + this.pseudo + " : " + message;
         System.out.println(message);
         log(this.address+":"+this.port+"/"+message+"\n");
+        if (!mainServer.getClientsAdress().containsKey(pseudo)) {
+            sendMessageToUser(packet, "User not found");
+            return;
+        }
         DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAdress(pseudo), mainServer.getPort(pseudo));
         DatagramPacket response2 = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
         server.send(response1);
