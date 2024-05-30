@@ -1,16 +1,15 @@
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MainServer implements Runnable{
     DatagramSocket server;
-    HashMap<String, InetAddress> clientsAdress = new HashMap<>();
-    HashMap<String, Integer> clientsPort = new HashMap<>();
+    private final HashMap<String, InetAddress> clientsAddress = new HashMap<>();
+    private final HashMap<String, Integer> clientsPort = new HashMap<>();
 
-    HashMap<String, ArrayList<String>> rooms = new HashMap<>();
-    HashMap<String, String> clientsRoom = new HashMap<>();
+    private final HashMap<String, ArrayList<String>> rooms = new HashMap<>();
+    private final HashMap<String, String> clientsRoom = new HashMap<>();
 
     String logFile;
 
@@ -33,13 +32,13 @@ public class MainServer implements Runnable{
             int portSender = packet.getPort();
             InetAddress addressSender = packet.getAddress();
             String pseudo = new String(packet.getData(), 0, packet.getLength());
-            if (clientsAdress.containsKey(pseudo)) {
+            if (clientsAddress.containsKey(pseudo)) {
                 String message = "Pseudo already taken";
                 DatagramPacket packet2 = new DatagramPacket(message.getBytes(), message.length(), addressSender, portSender);
                 server.send(packet2);
                 return;
             }
-            clientsAdress.put(pseudo, packet.getAddress());
+            clientsAddress.put(pseudo, packet.getAddress());
             clientsPort.put(pseudo, packet.getPort());
             clientsRoom.put(pseudo, "general");
             UserServer userServer = new UserServer(portSender, addressSender, pseudo, this);
@@ -72,8 +71,8 @@ public class MainServer implements Runnable{
         clientsRoom.put(pseudo, "general");
     }
 
-    public HashMap<String, InetAddress> getClientsAdress() {
-        return clientsAdress;
+    public HashMap<String, InetAddress> getClientsAddress() {
+        return clientsAddress;
     }
 
     public HashMap<String, ArrayList<String>> getRooms() {
@@ -88,8 +87,8 @@ public class MainServer implements Runnable{
         return rooms.get(room);
     }
 
-    public InetAddress getAdress(String pseudo) {
-        return clientsAdress.get(pseudo);
+    public InetAddress getAddress(String pseudo) {
+        return clientsAddress.get(pseudo);
     }
 
     public int getPort(String pseudo) {
@@ -98,7 +97,7 @@ public class MainServer implements Runnable{
 
     public void disconnect(String pseudo) {
         System.out.println(pseudo);
-        clientsAdress.remove(pseudo);
+        clientsAddress.remove(pseudo);
         clientsPort.remove(pseudo);
         String room = clientsRoom.get(pseudo);
         clientsRoom.remove(pseudo);

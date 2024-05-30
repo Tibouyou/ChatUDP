@@ -1,7 +1,5 @@
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.*;
-import java.util.Arrays;
 import java.util.Scanner;
 public class Client implements Runnable{
     boolean connected = false;

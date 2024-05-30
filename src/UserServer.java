@@ -7,10 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.HashMap;
 
 public class UserServer implements Runnable{
     MainServer mainServer;
@@ -60,7 +58,7 @@ public class UserServer implements Runnable{
                         sendPrivateMessage(pseudo, packet, messageToSend);
                     }
                     case "/list" -> {
-                        String messageToSend = "Connected people : " + mainServer.getClientsAdress().keySet() + "\n" +
+                        String messageToSend = "Connected people : " + mainServer.getClientsAddress().keySet() + "\n" +
                                 "Rooms : " + mainServer.getRooms().keySet();
                         sendMessageToUser(packet, messageToSend);
                     }
@@ -73,14 +71,16 @@ public class UserServer implements Runnable{
                         }
                     }
                     case "/help" -> {
-                        String messageToSend = "Commands available :\n" +
-                                "/quit : disconnect from the server\n" +
-                                "/list : list connected people and rooms\n" +
-                                "/msg [pseudo] [message] : send a private message to a user\n" +
-                                "/room create [roomName] : create a room\n" +
-                                "/room join [roomName] : join a room\n" +
-                                "/room leave [roomName] : leave a room\n" +
-                                "/miguel : summon Miguel\n";
+                        String messageToSend = """
+                                Commands available :
+                                /quit : disconnect from the server
+                                /list : list connected people and rooms
+                                /msg [pseudo] [message] : send a private message to a user
+                                /room create [roomName] : create a room
+                                /room join [roomName] : join a room
+                                /room leave [roomName] : leave a room
+                                /miguel : summon Miguel
+                                """;
                         sendMessageToUser(packet, messageToSend);
                     }
                     case "/room" -> {
@@ -119,30 +119,26 @@ public class UserServer implements Runnable{
                                 mainServer.leaveRoom(mainServer.getRoom(pseudo), pseudo);
                                 sendMessageToUser(packet, "Room left");
                             }
-                            default -> {
-                                sendMessageToUser(packet, "Unknown command");
-                            }
+                            default -> sendMessageToUser(packet, "Unknown command");
                         }
                     }
-                    default -> {
-                        sendMessageToUser(packet, "Unknown command");
-                    }
+                    default -> sendMessageToUser(packet, "Unknown command");
                 }
             } else {
-                sendMessage(packet, message);
+                sendMessage(message);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendMessage(DatagramPacket packet, String message) throws IOException {
+    public void sendMessage(String message) throws IOException {
         String room = mainServer.getRoom(pseudo);
         message = "["+mainServer.getRoom(this.pseudo)+"]" + this.pseudo + " : " + message + "\n";
         System.out.println(message);
         log(this.address+":"+this.port+"/"+message+"\n");
         for (String pseudo : mainServer.getUserInRoom(room)) {
-            DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAdress(pseudo), mainServer.getPort(pseudo));
+            DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAddress(pseudo), mainServer.getPort(pseudo));
             server.send(response);
         }
     }
@@ -157,11 +153,11 @@ public class UserServer implements Runnable{
         message = "(private) " + this.pseudo + " : " + message;
         System.out.println(message);
         log(this.address+":"+this.port+"/"+message+"\n");
-        if (!mainServer.getClientsAdress().containsKey(pseudo)) {
+        if (!mainServer.getClientsAddress().containsKey(pseudo)) {
             sendMessageToUser(packet, "User not found");
             return;
         }
-        DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAdress(pseudo), mainServer.getPort(pseudo));
+        DatagramPacket response1 = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAddress(pseudo), mainServer.getPort(pseudo));
         DatagramPacket response2 = new DatagramPacket(message.getBytes(), message.length(), packet.getAddress(), packet.getPort());
         server.send(response1);
         server.send(response2);
