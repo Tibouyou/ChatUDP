@@ -137,6 +137,10 @@ public class UserServer implements Runnable{
         message = "["+mainServer.getRoom(this.pseudo)+"]" + this.pseudo + " : " + message + "\n";
         System.out.println(message);
         log(this.address+":"+this.port+"/"+message+"\n");
+        if (message.getBytes().length > 1024) {
+            sendMessageToUser(new DatagramPacket("Message too long".getBytes(), "Message too long".length(), address, port), "Message too long");
+            return;
+        }
         for (String pseudo : mainServer.getUserInRoom(room)) {
             DatagramPacket response = new DatagramPacket(message.getBytes(), message.length(), mainServer.getAddress(pseudo), mainServer.getPort(pseudo));
             server.send(response);
